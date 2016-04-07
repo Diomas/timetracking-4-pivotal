@@ -1,11 +1,11 @@
 # timetracking-4-pivotal
 Build spent time reports for Pivotal Tracker
 
-![Screenshot](docs/screenshot.jpg "screenshot")
+![Screenshot](docs/screenshot.png "screenshot")
 
 This utility gets all stories from the project and iterate over each comment to find comments that are recognized as time spent records. Then it builds a spreadsheet with a summarized data.
 
-## Recognized `spent` comment patterns:
+## Recognized `spent` comment patterns
 
 ### Short record
 `spent 2h`
@@ -24,3 +24,5 @@ The same as `spent 0.5h`. Also `d` is supported (for whatever reason).
 
 ### Comment
 `spent 1.5h: reading the spec`
+
+Any comment can be added after the time value
