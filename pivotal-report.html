@@ -1,0 +1,88 @@
+<html>
+  <head>
+    <title>Access the Pivotal Tracker API via CORS</title>
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js' type='text/javascript'></script>
+    <script src='pivotal-report.js' type="text/javascript"></script>
+    <style type="text/css" media="print">
+      form { display: none; }
+    </style>
+    <style type="text/css">
+
+      body {
+        padding: 2em;
+      }
+
+      form {
+        padding: 1em;
+        background: #eee;
+      }
+
+      input {
+        margin-right: 2em;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      td, th {
+        padding: 0.2em;
+        border: 1px solid #999;
+        font-family: Helvetica,Arial,sans-serif;
+        font-size: 10pt;
+      }
+
+      th {
+        text-align: center;
+      }
+
+      .daycolumn {
+        width: 2em;
+        text-align: center;
+      }
+
+      .totalcolumn {
+        text-align: center;
+      }
+
+      .titlerow {
+        border: none;
+        padding-top: 1em;
+        text-align: left;
+      }
+
+      .labels {
+        color: #999;
+        font-size: smaller;
+      }
+
+    </style>
+  </head>
+  <body>
+    
+    <form id="fetch_data_form">
+
+      <label for='token'>User API Token:
+        <!--<br/><small>(get it from <a href="https://www.pivotaltracker.com/profile">Pivotal profile page</a>)</small>-->
+      </label>
+      <input id='pivotal_token' type='text' size="32">
+
+      <label for='project_id'>Project:</label>
+        https://www.pivotaltracker.com/n/projects/<input id='project_id' type='text' size="7"/>
+
+      <button id='fetch_btn'>Update Data</button>
+
+    </form>
+
+    <form id="options_form">
+    </form>
+
+    <div style='margin-top:2em'>
+      <table id='result_table'>
+      </table>
+      <table id='labels_table'>
+      </table>
+    </div>
+
+  </body>
+</html>
