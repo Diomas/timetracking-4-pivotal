@@ -17,10 +17,6 @@
         background: #eee;
       }
 
-      input {
-        margin-right: 2em;
-      }
-
       table {
         border-collapse: collapse;
       }
@@ -34,6 +30,15 @@
 
       th {
         text-align: center;
+      }
+
+      .field {
+        margin-right: 2em;
+      }
+
+      .statecell {
+        text-align: center;
+        font-size: smaller;
       }
 
       .daycolumn {
@@ -62,19 +67,38 @@
     
     <form id="fetch_data_form">
 
-      <label for='token'>User API Token:
-        <!--<br/><small>(get it from <a href="https://www.pivotaltracker.com/profile">Pivotal profile page</a>)</small>-->
-      </label>
-      <input id='pivotal_token' type='text' size="32">
+      <span class="field">
+        <label for='pivotal_token'>User API Token:
+          <!--<br/><small>(get it from <a href="https://www.pivotaltracker.com/profile">Pivotal profile page</a>)</small>-->
+        </label>
+        <input id='pivotal_token' type='text' size="32">
+      </span>
 
-      <label for='project_id'>Project:</label>
-        https://www.pivotaltracker.com/n/projects/<input id='project_id' type='text' size="7"/>
+      <span class="field">
+        <label for='project_id'>Project:</label>
+          https://www.pivotaltracker.com/n/projects/<input id='project_id' type='text' size="7"/>
+      </span>
 
       <button id='fetch_btn'>Update Data</button>
 
     </form>
 
     <form id="options_form">
+      <span class="field">
+        <input id='show_labels' type='checkbox'>Show labels</input>
+      </span>
+
+      <span class="field">
+        <label for='date_from'>From:</label>
+        <input id='date_from' type='date'/>
+      </span>
+
+      <span class="field">
+        <label for='date_to'>To:</label>
+        <input id='date_to' type='date'/>
+      </span>
+
+      <button id='filter_btn'>Filter</button>
     </form>
 
     <div style='margin-top:2em'>
