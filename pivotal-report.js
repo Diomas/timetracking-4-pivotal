@@ -6,11 +6,12 @@ window.console = window.console || (function(){
 
 month_names_short = {'01':'Jan', '02':'Feb', '03':'Mar', '04':'Apr', '05':'May', '06':'Jun', '07':'Jul', '08':'Aug', '09':'Sep', '10':'Oct', '11':'Nov', '12':'Dec'};
 
-function executeTrackerApiFetch(e) {
-  
-  // if a the button is inside 
-  e.preventDefault();
+var allStories;
+var allMemberships;
+var allLabels;
 
+function executeTrackerApiFetch() {
+  
   // get parameters
   var token = $('#pivotal_token').val();
   var projectId = $('#project_id').val();
@@ -24,7 +25,7 @@ function executeTrackerApiFetch(e) {
   $.when(
     // we can filter stories by state: '/stories?filter=state:delivered,finished,rejected,started,unstarted,unscheduled'
     // need to set limit to some big value (it's 100 by default)
-    fetchData(projectId, '/stories?fields=id,name,label_ids,owner_ids,comments' + storiesFilters + '&limit=200', token), // '/stories?filter=state:delivered,finished,rejected,started,unstarted,unscheduled' '&limit=20'
+    fetchData(projectId, '/stories?fields=id,name,current_state,label_ids,owner_ids,comments' + storiesFilters + '&limit=200', token), // '/stories?filter=state:delivered,finished,rejected,started,unstarted,unscheduled' '&limit=20'
     // get all people in the project
     fetchData(projectId, '/memberships', token),
     // get all labels in the project
@@ -39,27 +40,27 @@ function executeTrackerApiFetch(e) {
 
 
 function processResponses(storiesResponse, membershipsResponse, labelsResponse) {
-
   console.log("Data is fetched.");
-
-  var allStories;
-  var memberships;
-  var labels;
-
   allStories = storiesResponse[0];
-  memberships = membershipsResponse[0];
-  labels = labelsResponse[0];
+  allMemberships = membershipsResponse[0];
+  allLabels = labelsResponse[0];
+  $('#options_form').show();
+  buildReport();
+}
+
+
+function buildReport() {
 
   var peopleById = {};
-  for (var i=0; i < memberships.length; i++) {
-    var membership = memberships[i];
+  for (var i=0; i < allMemberships.length; i++) {
+    var membership = allMemberships[i];
     var person = membership.person;
     peopleById[person.id] = person;
   }
 
   var labelsById = {};
-  for (var i = 0; i < labels.length; i++) {
-    var label = labels[i];
+  for (var i = 0; i < allLabels.length; i++) {
+    var label = allLabels[i];
     labelsById[label.id] = label;
   }
 
@@ -67,8 +68,8 @@ function processResponses(storiesResponse, membershipsResponse, labelsResponse) 
   var storiesByPersonId = {}; // storiesByPerson[personId][date]
   var hoursByLabelId = {};
   var stories = [];
-  var minDate = '9999-99-99';
-  var maxDate = '0000-00-00';
+  var dataMinDate = '9999-99-99';
+  var dataMaxDate = '0000-00-00';
   
   var html = '';
   for (var i = 0; i < allStories.length; i++) {
@@ -93,11 +94,11 @@ function processResponses(storiesResponse, membershipsResponse, labelsResponse) 
           if (matches[1] != undefined) {
             date = matches[1];
           }
-          if (date > maxDate) {
-            maxDate = date;
+          if (date > dataMaxDate) {
+            dataMaxDate = date;
           }
-          if (date < minDate) {
-            minDate = date;
+          if (date < dataMinDate) {
+            dataMinDate = date;
           }
           var hours = parseFloat(matches[2].slice(0, -1));
           var unit = matches[2].slice(-1);
@@ -154,54 +155,74 @@ function processResponses(storiesResponse, membershipsResponse, labelsResponse) 
 
   }
 
+  var minDate = new Date(dataMinDate);
+  var maxDate = new Date(dataMaxDate);
+
+  var fromDate = new Date($('#date_from').val());
+  if (isNaN(fromDate)) {
+    fromDate = minDate;
+    $('#date_from').val(dataMinDate);
+  }
+
+  var toDate = new Date($('#date_to').val());
+  if (isNaN(toDate)) {
+    toDate = maxDate;
+    $('#date_to').val(dataMaxDate);
+  }
+
   // list all dates from minDate to maxDate
   var allDates = [];
-  var d = new Date(minDate);
-  var e = new Date(maxDate);
-  while (d <= e) {
+  while (fromDate <= toDate) {
     // todo: check if date is working day and store it somewhere
-    allDates.push(d.toISOString().slice(0, 10));
-    d = new Date(d.setDate(d.getDate() + 1));
+    allDates.push(fromDate.toISOString().slice(0, 10));
+    fromDate = new Date(fromDate.setDate(fromDate.getDate() + 1));
   }
 
   html += '<tdbody>\n';
 
   var headerRows = drawTableHeaderRows(allDates);
   
-  html += '<tr><th class="titlerow" colspan="' + (allDates.length + 3) + '">All</th><tr>\n';
+  var passedLabelsById = undefined;
+  if ($('#show_labels').is(':checked')) {
+    passedLabelsById = labelsById;
+  }
+
+  html += '<tr><th class="titlerow" colspan="' + (allDates.length + 4) + '">All</th><tr>\n';
   html += headerRows;
-  html += drawTableBodyRows(allDates, stories, storiesByDate, undefined, peopleById, labelsById);
+  html += drawTableBodyRows(allDates, stories, storiesByDate, undefined, peopleById, passedLabelsById);
   html += drawTableFooterRow(allDates, storiesByDate, undefined, peopleById);
 
   var peopleIds = Object.keys(storiesByPersonId);
   for (var i = 0; i < peopleIds.length; i ++) {
     var personId = peopleIds[i];
     var personStories = storiesByPersonId[personId];
-    html += '<tr><th class="titlerow" colspan="' + (allDates.length + 3) + '">' + peopleById[personId].name + '</th><tr>\n';
+    html += '<tr><th class="titlerow" colspan="' + (allDates.length + 4) + '">' + peopleById[personId].name + '</th><tr>\n';
     html += headerRows;
-    html += drawTableBodyRows(allDates, personStories, storiesByDate, personId, peopleById, labelsById);
+    html += drawTableBodyRows(allDates, personStories, storiesByDate, personId, peopleById, passedLabelsById);
     html += drawTableFooterRow(allDates, storiesByDate, personId, peopleById);
   }
 
   html += '</tdbody>\n';
   $('#result_table').html(html);
 
-  var sortedLabels = [];
-  for (var labelId in hoursByLabelId) {
-    var label = labelsById[labelId];
-    var hours = hoursByLabelId[labelId];
-    sortedLabels.push({name: label.name, hours: hours});
+  if ($('#show_labels').is(':checked')) {
+    var sortedLabels = [];
+    for (var labelId in hoursByLabelId) {
+      var label = labelsById[labelId];
+      var hours = hoursByLabelId[labelId];
+      sortedLabels.push({name: label.name, hours: hours});
+    }
+    sortedLabels.sort(function(a, b) {return b.hours - a.hours});
+    html = "<tbody>\n"
+    html += '<tr><th class="titlerow" colspan="2">Hours spent by labels</th><tr>\n';
+    html += '<tr><th>Label</th><th class="totalcolumn">Total</th><tr>\n';
+    for (var i in sortedLabels) {
+      var sortedLabel = sortedLabels[i];
+      html += '<tr><td>' + sortedLabel.name + '</td><td class="totalcolumn">' + sortedLabel.hours + 'h</td></tr>';
+    }
+    html += '</tdbody>\n';
+    $('#labels_table').html(html);
   }
-  sortedLabels.sort(function(a, b) {return b.hours - a.hours});
-  html = "<tbody>\n"
-  html += '<tr><th class="titlerow" colspan="2">Hours spent by labels</th><tr>\n';
-  html += '<tr><th>Label</th><th class="totalcolumn">Total</th><tr>\n';
-  for (var i in sortedLabels) {
-    var sortedLabel = sortedLabels[i];
-    html += '<tr><td>' + sortedLabel.name + '</td><td class="totalcolumn">' + sortedLabel.hours + 'h</td></tr>';
-  }
-  html += '</tdbody>\n';
-  $('#labels_table').html(html);
 
   console.log("Done.");
 }
@@ -260,7 +281,7 @@ function drawTableHeaderRows(allDates) {
     dayCount ++;
   }
   months += '<th colspan="' + dayCount + '">' + lastMonth + '</th>';
-  html += '<tr><th rowspan="2">ID</th><th rowspan="2">Task</th>' + months + '<th rowspan="2">Total</th></tr>\n';
+  html += '<tr><th rowspan="2">ID</th><th rowspan="2">Task</th><th rowspan="2">State</th>' + months + '<th rowspan="2">Total</th></tr>\n';
   html += '<tr>' + days + '</tr>\n';
   return html;
 }
@@ -269,16 +290,16 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
   html = '';
   for (var i = 0; i < stories.length; i ++) {
     var story = stories[i];
-    html += '<tr><td><a href="' + story.href + '">' + story.id + '</a></td><td>' + story.name;
+    htmlRow = '<tr><td><a href="' + story.href + '">' + story.id + '</a></td><td>' + story.name;
     if (labelsById != undefined) {
     var labels = [];
       for (var j in story.label_ids) {
         var labelId = story.label_ids[j];
         labels.push(labelsById[labelId].name);
       }
-      html += '<div class="labels">' + labels.join(', ') + '</div>';
+      htmlRow += '<div class="labels">' + labels.join(', ') + '</div>';
     }
-    html += '</td>';
+    htmlRow += '</td><td class="statecell">' + story.current_state + '</td>';
     var storyTotalHours = 0;
     for (var j = 0; j < allDates.length; j ++) {
       var date = allDates[j];
@@ -298,18 +319,21 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
         }
       }
       if (totalHours > 0) {
-        html += '<td class="daycolumn" title="' + spentLabels.join('\n') + '">' + totalHours + '</td>';
+        htmlRow += '<td class="daycolumn" title="' + spentLabels.join('\n') + '">' + totalHours + '</td>';
       } else {
-        html += '<td class="daycolumn">&nbsp;</td>';
+        htmlRow += '<td class="daycolumn">&nbsp;</td>';
       }
     }
-    html += '<td class="totalcolumn">' + storyTotalHours + 'h</td></tr>\n';
+    if (storyTotalHours > 0) {
+      htmlRow += '<td class="totalcolumn">' + storyTotalHours + 'h</td></tr>\n';
+      html += htmlRow;
+    }
   }
   return html;
 }
 
 function drawTableFooterRow(allDates, storiesByDate, targetPersonId, peopleById) {
-  html = '<tr><th>Total</th><th>&nbsp;</th>';
+  html = '<tr><th>Total</th><th>&nbsp;</th><th>&nbsp;</th>';
   var totalHours = 0;
   for (var i = 0; i < allDates.length; i ++) {
     var date = allDates[i];
@@ -365,7 +389,8 @@ function drawTableFooterRow(allDates, storiesByDate, targetPersonId, peopleById)
 
 $(function() {
   $('#options_form').hide();
-  $('#fetch_btn').click(executeTrackerApiFetch);
+  $('#fetch_btn').click(function(e) {e.preventDefault(); executeTrackerApiFetch();});
+  $('#filter_btn').click(function(e) {e.preventDefault(); buildReport();});
   if (localStorage.pivotalToken != undefined) {
     $('#pivotal_token').val(localStorage.pivotalToken);
   }
