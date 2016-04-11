@@ -222,6 +222,8 @@ function buildReport() {
     }
     html += '</tdbody>\n';
     $('#labels_table').html(html);
+  } else {
+    $('#labels_table').html('');
   }
 
   console.log("Done.");
