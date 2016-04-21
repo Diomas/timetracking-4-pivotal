@@ -9,6 +9,9 @@ month_names_short = {'01':'Jan', '02':'Feb', '03':'Mar', '04':'Apr', '05':'May',
 var allStories;
 var allMemberships;
 var allLabels;
+var minDataDate;
+var maxDataDate;
+var dateRanges;
 
 function executeTrackerApiFetch() {
   
@@ -38,16 +41,16 @@ function executeTrackerApiFetch() {
 
 }
 
-
 function processResponses(storiesResponse, membershipsResponse, labelsResponse) {
   console.log("Data is fetched.");
   allStories = storiesResponse[0];
   allMemberships = membershipsResponse[0];
   allLabels = labelsResponse[0];
-  $('#options_form').show();
   buildReport();
+  updateDateRanges();
+  $('#options_form').show();
+  $('#actions_form').show();  
 }
-
 
 function buildReport() {
 
@@ -155,18 +158,18 @@ function buildReport() {
 
   }
 
-  var minDate = new Date(dataMinDate);
-  var maxDate = new Date(dataMaxDate);
+  minDataDate = new Date(dataMinDate);
+  maxDataDate = new Date(dataMaxDate);
 
   var fromDate = new Date($('#date_from').val());
   if (isNaN(fromDate)) {
-    fromDate = minDate;
+    fromDate = new Date(minDataDate);
     $('#date_from').val(dataMinDate);
   }
 
   var toDate = new Date($('#date_to').val());
   if (isNaN(toDate)) {
-    toDate = maxDate;
+    toDate = new Date(maxDataDate);
     $('#date_to').val(dataMaxDate);
   }
 
@@ -388,11 +391,74 @@ function drawTableFooterRow(allDates, storiesByDate, targetPersonId, peopleById)
   return html;
 }
 
+function updateDateRanges() {
+  dateRanges = {};
+  var today = new Date();
+  var toDate;
+  var fromDate;
+  var month;
+
+  toDate = new Date(maxDataDate); 
+  fromDate = new Date(minDataDate);
+  dateRanges.all_range_btn = {from: fromDate, to: toDate};
+
+  toDate = new Date(); 
+  toDate.setDate(today.getDate() - 1);
+  fromDate = new Date();
+  fromDate.setDate(today.getDate() - 7);
+  dateRanges.prev_7_days_range_btn = {from: fromDate, to: toDate};
+
+  toDate = new Date();
+  fromDate = new Date();
+  month = toDate.toISOString().slice(5, 7);
+  while (fromDate.toISOString().slice(5, 7) == month) {
+    fromDate = new Date(fromDate.setDate(fromDate.getDate() - 1));
+  }
+  fromDate = new Date(fromDate.setDate(fromDate.getDate() + 1));
+  dateRanges.current_month_range_btn = {from: fromDate, to: toDate};
+  
+  toDate = new Date();
+  fromDate = new Date();
+  month = toDate.toISOString().slice(5, 7);
+  while (fromDate.toISOString().slice(5, 7) == month && fromDate >= minDataDate) {
+    fromDate = new Date(fromDate.setDate(fromDate.getDate() - 1));
+  }
+  if (fromDate >= minDataDate) {
+    toDate = new Date(fromDate);
+    month = toDate.toISOString().slice(5, 7);
+    while (fromDate.toISOString().slice(5, 7) == month && fromDate >= minDataDate) {
+      fromDate = new Date(fromDate.setDate(fromDate.getDate() - 1));
+    }
+    fromDate = new Date(fromDate.setDate(fromDate.getDate() + 1));
+    dateRanges.prev_month_range_btn = {from: fromDate, to: toDate};
+    $('#prev_month_range_btn').attr('disabled', false);
+  } else {
+    // there is no data for prev month
+    $('#prev_month_range_btn').attr('disabled', true);
+  }
+
+}
 
 $(function() {
   $('#options_form').hide();
-  $('#fetch_btn').click(function(e) {e.preventDefault(); executeTrackerApiFetch();});
-  $('#filter_btn').click(function(e) {e.preventDefault(); buildReport();});
+
+  $('#fetch_data_form').submit(function(event) {
+    event.preventDefault();
+    executeTrackerApiFetch();
+  });
+
+  $('#options_form').submit(function(event) {
+    event.preventDefault();
+    buildReport();
+  });
+
+  $('.range_btn').click(function(event) {
+      var range = dateRanges[this.id];
+      $('#date_from').val(range.from.toISOString().slice(0, 10));
+      $('#date_to').val(range.to.toISOString().slice(0, 10));
+      buildReport();
+  });
+
   if (localStorage.pivotalToken != undefined) {
     $('#pivotal_token').val(localStorage.pivotalToken);
   }
