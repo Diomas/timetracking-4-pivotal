@@ -452,12 +452,31 @@ $(function() {
     buildReport();
   });
 
+  $("#options_form input[type='checkbox'],#options_form input.autosubmit[type='radio']").on("click", function () {
+    $('#options_form').submit();
+  });
+  $("#options_form input[type='date']").on("blur", function (e) {
+    $('#options_form').submit();
+  });
+  $("#options_form input[type='date']").on("keyup", function (e) {
+    if (e.which === 13 || e.which === 9) {
+      $('#options_form').submit();
+    }
+  });
+  // $("#options_form select").on("change", function () {
+  //     if ($(this).is(":focus")) {
+  //       $('#options_form').submit();
+  //     }
+  // });
+
   $('.range_btn').click(function(event) {
       var range = dateRanges[this.id];
       $('#date_from').val(range.from.toISOString().slice(0, 10));
       $('#date_to').val(range.to.toISOString().slice(0, 10));
       buildReport();
   });
+
+
 
   if (localStorage.pivotalToken != undefined) {
     $('#pivotal_token').val(localStorage.pivotalToken);
