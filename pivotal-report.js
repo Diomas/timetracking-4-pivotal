@@ -139,7 +139,11 @@ function buildReport() {
       owners = [];
       for (var j = 0; j < story.owner_ids.length; j ++) {
         var person = peopleById[story.owner_ids[j]];
-        owners.push(person.initials);
+        if (person != undefined) {
+          owners.push(person.initials);
+        } else {
+          owners.push(story.owner_ids[j]);
+        }
       }
       owners = ' (' + owners.join(", ") + ')';
     }
