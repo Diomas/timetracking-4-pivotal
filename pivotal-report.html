@@ -18,21 +18,6 @@
         margin-bottom: 2em;
       }
 
-      table {
-        border-collapse: collapse;
-      }
-
-      td, th {
-        padding: 0.2em;
-        border: 1px solid #999;
-        font-family: Helvetica,Arial,sans-serif;
-        font-size: small;
-      }
-
-      th {
-        text-align: center;
-      }
-
       .field {
         display: inline-block;
         margin: 0.25em;
@@ -57,31 +42,6 @@
         pointer-events: none;
         color: #999;
       }      
-
-      .statecell {
-        text-align: center;
-        font-size: smaller;
-      }
-
-      .daycolumn {
-        width: 2em;
-        text-align: center;
-      }
-
-      .totalcolumn {
-        text-align: center;
-      }
-
-      .titlerow {
-        border: none;
-        padding-top: 1em;
-        text-align: left;
-      }
-
-      .labels {
-        color: #999;
-        font-size: smaller;
-      }
 
     </style>
   </head>
@@ -142,6 +102,47 @@
     </form>
 
     <div id='result_area'>
+      <style type="text/css">
+        table {
+          border-collapse: collapse;
+        }
+
+        td, th {
+          padding: 0.2em;
+          border: 1px solid #999;
+          font-family: Helvetica,Arial,sans-serif;
+          font-size: small;
+        }
+
+        th {
+          text-align: center;
+        }
+
+        .statecell {
+          text-align: center;
+          font-size: smaller;
+        }
+
+        .daycolumn {
+          width: 2em;
+          text-align: center;
+        }
+
+        .totalcolumn {
+          text-align: center;
+        }
+
+        .titlerow {
+          border: none;
+          padding-top: 1em;
+          text-align: left;
+        }
+
+        .labels {
+          color: #999;
+          font-size: smaller;
+        }
+      </style>
       <table id='result_table'>
       </table>
       <table id='labels_table'>
