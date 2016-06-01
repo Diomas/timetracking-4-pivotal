@@ -310,7 +310,7 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
   html = '';
   for (var i = 0; i < stories.length; i ++) {
     var story = stories[i];
-    htmlRow = '<tr><td><a href="' + story.href + '">' + story.id + '</a></td><td>' + story.name;
+    htmlRow = '<tr><td><a href="' + story.href + '">' + story.id + '</a></td><td class="taskcolumn">' + story.name;
     if (labelsById != undefined) {
     var labels = [];
       for (var j in story.label_ids) {
