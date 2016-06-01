@@ -19,6 +19,11 @@ function executeTrackerApiFetch() {
   var token = $('#pivotal_token').val();
   var projectId = $('#project_id').val();
 
+  var btn = $('#fetch_btn');
+  var btnText = btn.text();
+  btn.text("Loading...");
+  btn.prop("disabled", true);
+
   localStorage.pivotalToken = token;
   localStorage.pivotalProjectId = projectId;
 
@@ -33,9 +38,13 @@ function executeTrackerApiFetch() {
     fetchData(projectId, '/memberships', token),
     // get all labels in the project
     fetchData(projectId, '/labels', token)
-  ).done(
-    processResponses
-  ).fail(function (jqXHR, textStatus) {
+  ).done(function (storiesResponse, membershipsResponse, labelsResponse) {
+    btn.text(btnText);
+    btn.prop("disabled", false);
+    processResponses(storiesResponse, membershipsResponse, labelsResponse);
+  }).fail(function (jqXHR, textStatus) {
+    btn.text(btnText);
+    btn.prop("disabled", false);
     alert("Can't fetch data");
   });
 
@@ -46,6 +55,8 @@ function processResponses(storiesResponse, membershipsResponse, labelsResponse) 
   allStories = storiesResponse[0];
   allMemberships = membershipsResponse[0];
   allLabels = labelsResponse[0];
+  var now = new Date();
+  $('#update_time').text(now.toISOString().slice(0, 19).replace("T", " "));
   buildReport();
   updateDateRanges();
   $('#options_form').show();
