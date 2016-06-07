@@ -5,6 +5,7 @@ window.console = window.console || (function(){
 })();
 
 month_names_short = {'01':'Jan', '02':'Feb', '03':'Mar', '04':'Apr', '05':'May', '06':'Jun', '07':'Jul', '08':'Aug', '09':'Sep', '10':'Oct', '11':'Nov', '12':'Dec'};
+weekday_names = {'0':'Sunday', '1':'Monday', '2':'Tuseday', '3':'Wednesday', '4':'Thursday', '5':'Friday', '6':'Saturday'};
 
 var allStories;
 var allMemberships;
@@ -12,6 +13,14 @@ var allLabels;
 var minDataDate;
 var maxDataDate;
 var dateRanges;
+var allDates;
+var holidays;
+var stories;
+var storiesByDate;
+var storiesByPersonId;
+var peopleById;
+var labelsById;
+var hoursByLabelId;
 
 function executeTrackerApiFetch() {
   
@@ -65,27 +74,26 @@ function processResponses(storiesResponse, membershipsResponse, labelsResponse) 
 
 function buildReport() {
 
-  var peopleById = {};
+  peopleById = {};
   for (var i=0; i < allMemberships.length; i++) {
     var membership = allMemberships[i];
     var person = membership.person;
     peopleById[person.id] = person;
   }
 
-  var labelsById = {};
+  labelsById = {};
   for (var i = 0; i < allLabels.length; i++) {
     var label = allLabels[i];
     labelsById[label.id] = label;
   }
 
-  var storiesByDate = {}; // storiesByDate[date]
-  var storiesByPersonId = {}; // storiesByPerson[personId][date]
-  var hoursByLabelId = {};
-  var stories = [];
+  storiesByDate = {}; // storiesByDate[date]
+  storiesByPersonId = {}; // storiesByPerson[personId][date]
+  hoursByLabelId = {};
+  stories = [];
   var dataMinDate = '9999-99-99';
   var dataMaxDate = '0000-00-00';
   
-  var html = '';
   for (var i = 0; i < allStories.length; i++) {
     
     var story = allStories[i];
@@ -189,16 +197,31 @@ function buildReport() {
   }
 
   // list all dates from minDate to maxDate
-  var allDates = [];
+  allDates = [];
+  holidays = [];
+  var holidayExceptions = getHolidayExceptions();
   while (fromDate <= toDate) {
-    // todo: check if date is working day and store it somewhere
-    allDates.push(fromDate.toISOString().slice(0, 10));
+    var dateStr = fromDate.toISOString().slice(0, 10);
+    allDates.push(dateStr);
+    var dayOfWeek = fromDate.getDay();
+    var isHoliday = dayOfWeek == 0 || dayOfWeek == 6; // Sunday of Saturday
+    if (holidayExceptions[dateStr] != undefined) {
+      isHoliday = holidayExceptions[dateStr];
+    }
+    holidays.push(isHoliday);
     fromDate = new Date(fromDate.setDate(fromDate.getDate() + 1));
   }
 
-  html += '<tdbody>\n';
+  renderHtml();
 
-  var headerRows = drawTableHeaderRows(allDates);
+  console.log("Done.");
+}
+
+function renderHtml() {
+
+  var html = '<tdbody>\n';
+
+  var headerRows = drawTableHeaderRows();
   
   var passedLabelsById = undefined;
   if ($('#show_labels').is(':checked')) {
@@ -207,8 +230,8 @@ function buildReport() {
 
   html += '<tr><th class="titlerow" colspan="' + (allDates.length + 4) + '">All</th><tr>\n';
   html += headerRows;
-  html += drawTableBodyRows(allDates, stories, storiesByDate, undefined, peopleById, passedLabelsById);
-  html += drawTableFooterRow(allDates, storiesByDate, undefined, peopleById);
+  html += drawTableBodyRows(undefined, passedLabelsById);
+  html += drawTableFooterRow(undefined);
 
   var peopleIds = Object.keys(storiesByPersonId);
   for (var i = 0; i < peopleIds.length; i ++) {
@@ -216,8 +239,8 @@ function buildReport() {
     var personStories = storiesByPersonId[personId];
     html += '<tr><th class="titlerow" colspan="' + (allDates.length + 4) + '">' + peopleById[personId].name + '</th><tr>\n';
     html += headerRows;
-    html += drawTableBodyRows(allDates, personStories, storiesByDate, personId, peopleById, passedLabelsById);
-    html += drawTableFooterRow(allDates, storiesByDate, personId, peopleById);
+    html += drawTableBodyRows(personId, passedLabelsById);
+    html += drawTableFooterRow(personId);
   }
 
   html += '</tdbody>\n';
@@ -244,7 +267,6 @@ function buildReport() {
     $('#labels_table').html('');
   }
 
-  console.log("Done.");
 }
 
 function fetchData(projectId, resourcePath, token) {
@@ -280,7 +302,7 @@ function getStoryUrl(id) {
   return 'https://www.pivotaltracker.com/story/show/' + id;
 }
 
-function drawTableHeaderRows(allDates) {
+function drawTableHeaderRows() {
   var html = '';
   var lastMonth = '';
   var months = '';
@@ -288,8 +310,11 @@ function drawTableHeaderRows(allDates) {
   var days = '';
   for (var i = 0; i < allDates.length; i ++) {
     var date = allDates[i];
+    var holiday = holidays[i] ? " holidaycolumn" : "";
+    var weekDayName = weekday_names[getWeekDay(date)];
+    var hint = "Change " + weekDayName + " to be a " + (holidays[i] ? "working day" : "holiday");
     var day = date.slice(-2);
-    days += '<th class="daycolumn">' + day + '</th>';
+    days += '<th class="daycolumn' + holiday + '" onclick="toogleHoliday(' + i + ')" title="' + hint + '">' + day + '</th>';
     var month = month_names_short[date.substring(5, 7)];
     if (lastMonth == '') {
       lastMonth = month;
@@ -306,16 +331,16 @@ function drawTableHeaderRows(allDates) {
   return html;
 }
 
-function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peopleById, labelsById) {
+function drawTableBodyRows(targetPersonId, passedLabelsById) {
   html = '';
   for (var i = 0; i < stories.length; i ++) {
     var story = stories[i];
     htmlRow = '<tr><td><a href="' + story.href + '">' + story.id + '</a></td><td class="taskcolumn">' + story.name;
-    if (labelsById != undefined) {
-    var labels = [];
+    if (passedLabelsById != undefined) {
+      var labels = [];
       for (var j in story.label_ids) {
         var labelId = story.label_ids[j];
-        labels.push(labelsById[labelId].name);
+        labels.push(passedLabelsById[labelId].name);
       }
       htmlRow += '<div class="labels">' + labels.join(', ') + '</div>';
     }
@@ -323,6 +348,7 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
     var storyTotalHours = 0;
     for (var j = 0; j < allDates.length; j ++) {
       var date = allDates[j];
+      var holiday = holidays[j] ? " holidaycolumn" : "";
       var totalHours = 0;
       var spentLabels = [];
       if (story.hoursByDate[date] != undefined) {
@@ -339,9 +365,9 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
         }
       }
       if (totalHours > 0) {
-        htmlRow += '<td class="daycolumn" title="' + spentLabels.join('\n') + '">' + totalHours + '</td>';
+        htmlRow += '<td class="daycolumn' + holiday + '" title="' + spentLabels.join('\n') + '">' + totalHours + '</td>';
       } else {
-        htmlRow += '<td class="daycolumn">&nbsp;</td>';
+        htmlRow += '<td class="daycolumn' + holiday + '">&nbsp;</td>';
       }
     }
     if (storyTotalHours > 0) {
@@ -352,14 +378,15 @@ function drawTableBodyRows(allDates, stories, storiesByDate, targetPersonId, peo
   return html;
 }
 
-function drawTableFooterRow(allDates, storiesByDate, targetPersonId, peopleById) {
+function drawTableFooterRow(targetPersonId) {
   html = '<tr><th>Total</th><th>&nbsp;</th><th>&nbsp;</th>';
   var totalHours = 0;
   for (var i = 0; i < allDates.length; i ++) {
     var date = allDates[i];
+    var holiday = holidays[i] ? " holidaycolumn" : "";
     var dateStories = storiesByDate[date];
     if (dateStories == undefined) {
-      html += '<th class="daycolumn">&nbsp;</th>';
+      html += '<th class="daycolumn' + holiday + '">&nbsp;</th>';
       continue;
     }
     var dateHoursByPerson = {};
@@ -396,9 +423,9 @@ function drawTableFooterRow(allDates, storiesByDate, targetPersonId, peopleById)
     }
 
     if (dateHours > 0) {
-      html += '<th class="daycolumn"' + title + '>' + dateHours + '</th>';
+      html += '<th class="daycolumn' + holiday + '"' + title + '>' + dateHours + '</th>';
     } else {
-      html += '<th class="daycolumn">&nbsp;</th>';
+      html += '<th class="daycolumn' + holiday + '">&nbsp;</th>';
     }
   }
 
@@ -454,6 +481,50 @@ function updateDateRanges() {
 
 }
 
+function toogleHoliday(i) {
+  var dateStr = allDates[i];
+  var isHoliday = holidays[i];
+  var holidayExceptions = getHolidayExceptions();
+  if (isHoliday != isWeekend(dateStr)) {
+    // this day is exception, so we just need to remove this exception
+    delete holidayExceptions[dateStr];
+  } else {
+    // this holiday is a weekend, so we need to add it to exceptions
+    holidayExceptions[dateStr] = !isHoliday;
+  }
+  saveHolidayExceptions(holidayExceptions);
+  holidays[i] = !isHoliday;
+  renderHtml();
+}
+
+function getHolidayExceptions() {
+  var holidayExceptions = {};
+  if (localStorage.holidayExceptions != undefined) {
+    var json = localStorage.holidayExceptions;
+    try {
+      holidayExceptions = JSON.parse(json);
+    } catch (e) {
+      // do nothing
+    }
+  }
+  return holidayExceptions;
+}
+
+function saveHolidayExceptions(holidayExceptions) {
+  var json = JSON.stringify(holidayExceptions);
+  localStorage.holidayExceptions = json;
+}
+
+function isWeekend(dateStr) {
+  var dayOfWeek = getWeekDay(dateStr);
+  return dayOfWeek == 0 || dayOfWeek == 6; // Sunday of Saturday
+}
+
+function getWeekDay(dateStr) {
+  var date = new Date(dateStr);
+  return date.getDay();
+}
+
 $(function() {
   $('#options_form').hide();
 
@@ -490,8 +561,6 @@ $(function() {
       $('#date_to').val(range.to.toISOString().slice(0, 10));
       buildReport();
   });
-
-
 
   if (localStorage.pivotalToken != undefined) {
     $('#pivotal_token').val(localStorage.pivotalToken);
