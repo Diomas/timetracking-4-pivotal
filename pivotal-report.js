@@ -326,8 +326,8 @@ function drawTableHeaderRows() {
     dayCount ++;
   }
   months += '<th colspan="' + dayCount + '">' + lastMonth + '</th>';
-  html += '<tr><th rowspan="2">ID</th><th rowspan="2">Task</th><th rowspan="2">State</th>' + months + '<th rowspan="2">Total</th></tr>\n';
-  html += '<tr>' + days + '</tr>\n';
+  html += '<tr class="header"><th rowspan="2">ID</th><th rowspan="2">Task</th><th rowspan="2">State</th>' + months + '<th rowspan="2">Total</th></tr>\n';
+  html += '<tr class="header">' + days + '</tr>\n';
   return html;
 }
 
@@ -433,6 +433,17 @@ function drawTableFooterRow(targetPersonId) {
   return html;
 }
 
+function getStartAndEndWeek(date) {
+  var weekDay = date.getDay();
+  var mondayDay = date.getDate() - weekDay + (weekDay == 0 ? -6 : 1);
+  var monday = new Date(date);
+  monday.setDate(mondayDay);
+  var sunday = new Date(date);
+  sunday.setDate(mondayDay + 6);
+  return [monday, sunday];
+}
+
+
 function updateDateRanges() {
   dateRanges = {};
   var today = new Date();
@@ -479,7 +490,19 @@ function updateDateRanges() {
     $('#prev_month_range_btn').attr('disabled', true);
   }
 
+  //week current
+  var startEndWeek =  getStartAndEndWeek(today);
+  dateRanges.current_week_range_btn = {from: startEndWeek[0], to:startEndWeek[1]};
+
+  //week previous
+  toDate = new Date();
+  toDate.setDate(today.getDate() - 7);
+  var startEndWeek =  getStartAndEndWeek(toDate);
+  dateRanges.prev_week_range_btn = {from: startEndWeek[0], to:startEndWeek[1]};
+
+
 }
+
 
 function toogleHoliday(i) {
   var dateStr = allDates[i];
